@@ -28,6 +28,8 @@ final class MergeTrimScreen extends ConsumerStatefulWidget {
 class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
   int _active = 0;
   bool _running = false;
+  bool _merging = false;
+  bool _cancelled = false;
   final Map<String, (int, int)> _ranges = {};
   bool _initialized = false;
   Map<String, int> _countsCache = const {};
@@ -56,20 +58,39 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
     });
   }
 
+  void _cancelMerge() {
+    setState(() {
+      _cancelled = true;
+      _running = false;
+    });
+  }
+
   Future<void> _merge() async {
-    setState(() => _running = true);
+    setState(() {
+      _running = true;
+      _merging = true;
+      _cancelled = false;
+    });
     final repo = getIt.get<PdfToolsRepository>();
-    final result = await repo.mergeSelected(_files, Map.of(_ranges));
-    if (!mounted) return;
-    setState(() => _running = false);
-    switch (result) {
-      case Success(:final value):
-        ref.invalidate(recentFilesProvider);
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => ResultScreen(results: [value], sourceCount: _files.length)),
-        );
-      case Failure(:final error):
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.localized(context))));
+    try {
+      final result = await repo.mergeSelected(_files, Map.of(_ranges));
+      if (!mounted || _cancelled) return;
+      switch (result) {
+        case Success(:final value):
+          ref.invalidate(recentFilesProvider);
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => ResultScreen(results: [value], sourceCount: _files.length)),
+          );
+        case Failure(:final error):
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.localized(context))));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _merging = false;
+          if (!_cancelled) _running = false;
+        });
+      }
     }
   }
 
@@ -111,10 +132,11 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
               onBack: () => Navigator.of(context).maybePop(),
             ),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
+              child: Column(
                 children: [
-                  _PreviewArea(file: activeFile, page: _previewPage, range: activeRange, total: activeTotal),
+                  Expanded(
+                    child: _PreviewArea(file: activeFile, page: _previewPage, range: activeRange, total: activeTotal),
+                  ),
                   const Divider(height: 1, thickness: 1, color: AppColors.border),
                   _Filmstrip(
                     files: _files,
@@ -158,15 +180,15 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: _running ? null : _merge,
+                    onTap: _merging ? null : _merge,
                     child: Opacity(
-                      opacity: _running ? 0.7 : 1,
+                      opacity: _merging ? 0.7 : 1,
                       child: Container(
                         height: AppDimens.ctaHeight,
                         padding: const EdgeInsets.symmetric(horizontal: 28),
                         decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9999)),
                         child: Center(
-                          child: _running
+                          child: _merging
                               ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.white))
                               : Text(
                                   context.tr('merge.action'),
@@ -182,7 +204,7 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
           ],
         ),
       ),
-      if (_running) const _MergeLoadingOverlay(),
+      if (_running) _MergeLoadingOverlay(fileCount: _files.length, onCancel: _cancelMerge),
     ],
   ),
 );
@@ -216,24 +238,27 @@ class _PreviewArea extends StatelessWidget {
             context.tr('page.of', namedArgs: {'a': '${page + 1}', 'b': '$total'}),
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 14),
-          Center(
-            child: Container(
-              width: 200,
-              height: 250,
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(AppDimens.radiusPage),
-                border: Border.all(color: AppColors.border),
-                boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 8))],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppDimens.radiusPage),
-                child: _PageRender(path: file.path, page: page),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 210 / 297,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusPage),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 8))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusPage),
+                    child: _PageRender(path: file.path, page: page),
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -308,7 +333,10 @@ class _PageRenderState extends State<_PageRender> {
 }
 
 class _MergeLoadingOverlay extends StatelessWidget {
-  const _MergeLoadingOverlay();
+  const _MergeLoadingOverlay({required this.fileCount, required this.onCancel});
+
+  final int fileCount;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -325,11 +353,24 @@ class _MergeLoadingOverlay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
-          const SizedBox(height: 16),
+          const SizedBox(
+            width: 44,
+            height: 44,
+            child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+          ),
+          const SizedBox(height: 18),
           Text(
-            context.tr('merge.processing'),
+            context.tr('merge.merging', namedArgs: {'n': '$fileCount'}),
+            textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: onCancel,
+            child: Text(
+              context.tr('common.cancel'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+            ),
           ),
         ],
       ),

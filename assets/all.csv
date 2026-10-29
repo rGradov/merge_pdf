@@ -43,6 +43,7 @@ merge.trim.keepPages,Keep pages {a}–{b},Оставить страницы {a}�
 merge.trim.shortPages,{n} p.,{n} стр.
 merge.trim.add,Add,Добавить
 merge.processing,Merging…,Объединение…
+merge.merging,Merging {n} files…,Объединение {n} файлов…
 page.of,Page {a} of {b},Страница {a} из {b}
 split.title,Split Document,Разделить документ
 split.select,Select a PDF,Выберите PDF
