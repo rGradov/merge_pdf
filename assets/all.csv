@@ -1,0 +1,56 @@
+en,ru
+app.title,Merge PDF,Merge PDF
+toolbox.merge,Merge,Объединить
+toolbox.split,Split,Разделить
+toolbox.rotate,Rotate,Повернуть
+home.cta,Select PDFs,Выбрать PDF
+home.recent,Recent,Недавние
+home.recent.count,{n} files,{n} файлов
+home.empty.title,No files yet,Пока нет файлов
+home.empty.subtitle,Add two or more PDFs to combine them.,Добавьте два или более PDF чтобы объединить их.
+home.storage,Storage,Хранилище
+home.storage.used,{n} used,{n} занято
+home.storage.free,Free up space,Освободить место
+home.step.select,Select,Выбор
+home.step.arrange,Arrange,Порядок
+home.step.merge,Merge,Готово
+home.limit,Supports up to 100 MB per file,До 100 МБ на файл
+file.pages,{n} pages,{n} страниц
+file.size,{n} MB,{n} МБ
+file.ago_hours,{n}h ago,{n} ч назад
+file.yesterday,Yesterday,Вчера
+settings.title,Settings,Настройки
+settings.storage,Storage,Хранилище
+merge.title,Merge PDF,Объединить PDF
+merge.subtitle,{n} files selected,Выбрано файлов: {n}
+merge.action,Merge PDFs,Объединить
+merge.add,Add files,Добавить файлы
+merge.hint,Drag to change order,Перетащите чтобы изменить порядок
+merge.empty,Add at least two PDFs,Добавьте минимум два PDF
+split.title,Split PDF,Разделить PDF
+split.subtitle,{n} pages,{n} страниц
+split.mode.all,Every page,Каждая страница
+split.mode.ranges,Ranges,Диапазоны
+split.ranges.hint,"e.g. 1-3, 5","например 1-3, 5"
+split.action,Split PDF,Разделить
+split.select,Select a PDF,Выберите PDF
+rotate.title,Rotate PDF,Повернуть PDF
+rotate.subtitle,Rotate all pages,Повернуть все страницы
+rotate.action,Rotate and save,Повернуть и сохранить
+rotate.select,Select a PDF,Выберите PDF
+common.back,Back,Назад
+common.share,Share,Поделиться
+common.open,Open,Открыть
+common.cancel,Cancel,Отмена
+common.delete,Delete,Удалить
+result.title,Done!,Готово!
+result.subtitle,Your file is ready,Ваш файл готов
+result.files,{n} files,{n} файлов
+result.again,New task,Ещё раз
+error.need_two_files,Add at least two PDFs.,Добавьте минимум два PDF.
+error.file_too_large,Each file must be under 100 MB.,Каждый файл должен быть меньше 100 МБ.
+error.no_file,No file selected.,Файл не выбран.
+error.pdf_read,Could not read this PDF.,Не удалось прочитать PDF.
+error.save,Could not save the result.,Не удалось сохранить результат.
+error.bad_ranges,Check the page ranges.,Проверьте диапазоны страниц.
+error.unknown,Something went wrong.,Что-то пошло не так.

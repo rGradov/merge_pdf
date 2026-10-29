@@ -1,0 +1,34 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    avoid_print: true
+    use_build_context_synchronously: true
+    avoid_annotating_with_dynamic: true
+    avoid_futureor_void: true
+    avoid_types_on_closure_parameters: true
+    library_private_types_in_public_api: false
+    prefer_single_quotes: true
+    # The skill mandates 120-column lines (`dart format -l 120`), which
+    # contradicts the 80-column cap shipped with very_good_analysis.
+    lines_longer_than_80_chars: false
+    # Flutter's own style puts `super.key` first; requiring non-key
+    # parameters before it fights every widget constructor.
+    always_put_required_named_parameters_first: false
+    # `Color(0xFF...)` constants are idiomatic and the app is mobile-only.
+    avoid_js_rounded_ints: false
+    # View-model `setX` methods are the skill's documented VM idiom.
+    use_setters_to_change_properties: false
+
+analyzer:
+  exclude: [
+    build/**,
+    android/**,
+    ios/**,
+    web/**,
+    .dart_tool/**,
+    .pub-cache/**,
+    '**/*.g.dart',
+    '**/*.freezed.dart',
+    lib/objectbox-model.json,
+  ]
