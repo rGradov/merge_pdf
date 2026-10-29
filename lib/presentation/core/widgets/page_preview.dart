@@ -75,15 +75,31 @@ class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
         height: height,
         child: Column(
           children: [
-            const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
+            SizedBox(
+              height: 44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
+                  ),
+                  Positioned(
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(Icons.close, size: 24, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
             Text(
               context.tr('page.of', namedArgs: {'a': '${_current + 1}', 'b': '${widget.total}'}),
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
