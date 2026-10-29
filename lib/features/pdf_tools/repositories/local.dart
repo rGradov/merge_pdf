@@ -61,6 +61,98 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   }
 
   @override
+  Future<Result<PdfResult>> mergeSelected(
+    List<PdfFile> files,
+    Map<String, (int, int)> pageRanges,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final tempDir = Directory('${await _outputDir()}/tmp');
+      await tempDir.create(recursive: true);
+
+      final toMerge = <PdfFile>[];
+      final temps = <String>[];
+      for (final file in files) {
+        final range = pageRanges[file.path];
+        if (range == null) {
+          toMerge.add(file);
+          continue;
+        }
+        final total = await _countPages(file.path);
+        if (total <= 0) {
+          toMerge.add(file);
+          continue;
+        }
+        final start = range.$1.clamp(0, total - 1);
+        final end = range.$2.clamp(0, total - 1);
+        if (start <= 0 && end >= total - 1) {
+          toMerge.add(file);
+          continue;
+        }
+        final pages = [for (var p = start; p <= end; p++) p];
+        final tempPath = '${tempDir.path}/trim-${now.millisecondsSinceEpoch}-${toMerge.length}.pdf';
+        final written = await _engine.extractPages(file.path, pages, tempPath);
+        if (written.errorOrNull case final error?) return Result.failure(error);
+        temps.add(tempPath);
+        toMerge.add(PdfFile(path: tempPath, name: file.name, sizeBytes: File(tempPath).lengthSync()));
+      }
+
+      final name = _mergedName(files);
+      final path = await _outputPath(name);
+      final written = await _engine.merge(toMerge, path);
+      final error = written.errorOrNull;
+      if (error != null) return Result.failure(error);
+
+      for (final temp in temps) {
+        try {
+          File(temp).deleteSync();
+        } on Exception {
+          // Best-effort cleanup of temporary extracted files.
+        }
+      }
+
+      final pages = await _countPages(path);
+      final sizeBytes = File(path).lengthSync();
+      final result = PdfResult(path: path, name: name, pages: pages, sizeBytes: sizeBytes, tool: ToolKind.merge);
+      await _record(_recent(result, now));
+      return Result.success(result);
+    } on Exception catch (e) {
+      return Result.failure(e);
+    }
+  }
+
+  String _mergedName(List<PdfFile> files) {
+    final first = files.first.name;
+    final base = first.toLowerCase().endsWith('.pdf') ? first.substring(0, first.length - 4) : first;
+    if (files.length == 1) return '$base.pdf';
+    return '$base + ${files.length - 1} more.pdf';
+  }
+
+  @override
+  Future<Result<PdfResult>> extract(PdfFile file, List<int> pages) async {
+    try {
+      final now = DateTime.now();
+      final name = 'extract-${now.millisecondsSinceEpoch}.pdf';
+      final path = await _outputPath(name);
+      final written = await _engine.extractPages(file.path, pages, path);
+      final error = written.errorOrNull;
+      if (error != null) return Result.failure(error);
+      final sizeBytes = File(path).lengthSync();
+      final result = PdfResult(
+        path: path,
+        name: name,
+        pages: pages.length,
+        sizeBytes: sizeBytes,
+        tool: ToolKind.split,
+      );
+      await _record(_recent(result, now));
+      return Result.success(result);
+    } on Exception catch (e) {
+      return Result.failure(e);
+    }
+  }
+
+  @override
   Future<Result<List<PdfResult>>> split(PdfFile file, SplitMode mode, List<(int, int)> ranges) async {
     try {
       final now = DateTime.now();
@@ -95,17 +187,23 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   }
 
   @override
-  Future<Result<PdfResult>> rotate(PdfFile file, int degrees) async {
+  Future<Result<PdfResult>> rotate(PdfFile file, int degrees, List<int> pages) async {
     try {
       final now = DateTime.now();
       final name = 'rotated-${now.millisecondsSinceEpoch}.pdf';
       final path = await _outputPath(name);
-      final written = await _engine.rotate(file.path, degrees, path);
+      final written = await _engine.rotatePages(file.path, {for (final p in pages) p: degrees}, path);
       final error = written.errorOrNull;
       if (error != null) return Result.failure(error);
-      final pages = await _countPages(path);
+      final totalPages = await _countPages(path);
       final sizeBytes = File(path).lengthSync();
-      final result = PdfResult(path: path, name: name, pages: pages, sizeBytes: sizeBytes, tool: ToolKind.rotate);
+      final result = PdfResult(
+        path: path,
+        name: name,
+        pages: totalPages,
+        sizeBytes: sizeBytes,
+        tool: ToolKind.rotate,
+      );
       await _record(_recent(result, now));
       return Result.success(result);
     } on Exception catch (e) {

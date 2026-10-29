@@ -111,6 +111,46 @@ final class LocalPdfEngineService implements PdfEngineService {
       await pdf.dispose();
     }
   }
+
+  @override
+  Future<EmptyResult> extractPages(String path, List<int> pages, String outputPath) async {
+    final pdf = Pdf();
+    try {
+      final sink = await FileSink.create(File(outputPath));
+      try {
+        await pdf.extractPages(FileSource(File(path)), sink, pages: pages);
+        return Result.success<Empty>(const Empty());
+      } on Exception catch (e) {
+        return Result.failure<Empty>(e);
+      } finally {
+        await sink.close();
+      }
+    } on Exception catch (e) {
+      return Result.failure<Empty>(e);
+    } finally {
+      await pdf.dispose();
+    }
+  }
+
+  @override
+  Future<EmptyResult> rotatePages(String path, Map<int, int> pages, String outputPath) async {
+    final pdf = Pdf();
+    try {
+      final sink = await FileSink.create(File(outputPath));
+      try {
+        await pdf.rotatePages(FileSource(File(path)), sink, pages: pages);
+        return Result.success<Empty>(const Empty());
+      } on Exception catch (e) {
+        return Result.failure<Empty>(e);
+      } finally {
+        await sink.close();
+      }
+    } on Exception catch (e) {
+      return Result.failure<Empty>(e);
+    } finally {
+      await pdf.dispose();
+    }
+  }
 }
 
 /// ObjectBox-backed [RecentFilesService] registered for every store channel.

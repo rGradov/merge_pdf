@@ -71,3 +71,20 @@ final class AllCsvAssetLoader extends AssetLoader {
     return cells;
   }
 }
+
+/// Formats a byte count into a short, locale-aware size label
+/// (e.g. `520 KB`, `1.1 MB`, `4.22 MB`).
+String formatBytes(BuildContext context, int bytes) {
+  final mb = bytes / (1024 * 1024);
+  if (mb >= 1) {
+    var text = mb.toStringAsFixed(2);
+    if (text.contains('.')) {
+      text = text
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
+    }
+    return context.tr('file.size', namedArgs: {'n': text});
+  }
+  final kb = (bytes / 1024).round();
+  return context.tr('file.sizeKb', namedArgs: {'n': '$kb'});
+}

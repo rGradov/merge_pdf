@@ -31,6 +31,13 @@ abstract interface class PdfEngineService {
 
   /// Rotates every page by [degrees] (90, 180 or 270).
   Future<EmptyResult> rotate(String path, int degrees, String outputPath);
+
+  /// Extracts the 0-based [pages] (in order) into one document at [outputPath].
+  Future<EmptyResult> extractPages(String path, List<int> pages, String outputPath);
+
+  /// Rotates only the pages in [pages] (0-based index → degrees) and writes the
+  /// full document to [outputPath].
+  Future<EmptyResult> rotatePages(String path, Map<int, int> pages, String outputPath);
 }
 
 /// Persistence of the recent files list.

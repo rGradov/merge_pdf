@@ -2,20 +2,19 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:merge_pdf/core/navigation/app_router.dart';
 import 'package:merge_pdf/features/pdf_tools/utils/utils.dart';
 import 'package:merge_pdf/features/pdf_tools/view_models/view_models.dart';
+import 'package:merge_pdf/features/pdf_tools/views/result_screen.dart';
 import 'package:merge_pdf/presentation/core/widgets/widgets.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
 
-/// Rotate flow: pick a document, choose an angle, run the rotation.
+/// Rotate flow: pick a document, select pages, choose a direction, rotate.
 final class RotateScreen extends HookConsumerWidget {
   /// Creates the rotate screen.
   const RotateScreen({super.key});
 
   static const int _maxFileBytes = 100 * 1024 * 1024;
-  static const List<int> _angles = [90, 180, 270];
 
   void _showError(BuildContext context, Exception error) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.localized(context))));
@@ -33,12 +32,15 @@ final class RotateScreen extends HookConsumerWidget {
     vm.setFile(file);
   }
 
-  Future<void> _run(BuildContext context, RotateVm vm) async {
+  Future<void> _run(BuildContext context, WidgetRef ref, RotateVm vm) async {
     final result = await vm.rotate.call();
     if (!context.mounted) return;
     switch (result) {
       case Success(:final value):
-        await ResultRoute($extra: [value]).push<void>(context);
+        ref.invalidate(recentFilesProvider);
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => ResultScreen(results: [value], sourceCount: value.pages)),
+        );
       case Failure(:final error):
         _showError(context, error);
     }
@@ -48,94 +50,105 @@ final class RotateScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(rotateVmProvider);
     final file = useValueListenable(vm.file);
-    final angle = useValueListenable(vm.angle);
+    final direction = useValueListenable(vm.direction);
+    final selected = useValueListenable(vm.selected);
     final running = useValueListenable(vm.rotate.isRunning);
+
+    final pagesValue = file == null ? null : ref.watch(pdfPagesProvider(file.path));
+    final pageCount = pagesValue?.value?.valueOrNull ?? 0;
+
+    useEffect(() {
+      final current = file;
+      if (current != null && pageCount > 0) vm.ensureInitialized(current.path, pageCount);
+      return null;
+    }, [file?.path, pageCount]);
+
+    final selectedCount = selected.length;
+    final dirLabel = direction == RotateDirection.clockwise
+        ? context.tr('rotate.direction.cw')
+        : context.tr('rotate.direction.ccw');
+
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: const Color(0xFFF9F9FA),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MainAppBar(title: context.tr('rotate.title'), onSettings: () => const SettingsRoute().push<void>(context)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (file == null)
-                    GestureDetector(
-                      onTap: () => _pickFile(context, vm),
-                      child: Container(
-                        height: AppDimens.recentTileHeight,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                        ),
-                        child: Center(
-                          child: Text(
-                            context.tr('rotate.select'),
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.primary),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      height: AppDimens.recentTileHeight,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                      ),
-                      child: Row(
+            ToolAppBar(
+              title: context.tr('rotate.title'),
+              onBack: () => Navigator.of(context).maybePop(),
+              trailing: file == null
+                  ? null
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ToolTextAction(label: context.tr('rotate.reset'), onTap: vm.clearSelection),
+                        const ToolAccentDot(icon: Icons.refresh),
+                      ],
+                    ),
+            ),
+            Expanded(
+              child: file == null
+                  ? _EmptyPicker(onPick: () => _pickFile(context, vm), label: context.tr('rotate.select'))
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const PdfDocBadge(),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              file.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.text),
-                            ),
+                          _SourceRow(fileName: file.name),
+                          const SizedBox(height: 16),
+                          _DirectionControl(
+                            isRight: direction == RotateDirection.clockwise,
+                            onSelectLeft: () => vm.setDirection(RotateDirection.counterClockwise),
+                            onSelectRight: () => vm.setDirection(RotateDirection.clockwise),
                           ),
-                          GestureDetector(
-                            onTap: () => vm.setFile(null),
-                            child: const Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Icon(Icons.close, size: 20, color: AppColors.textSecondary),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: pageCount == 0
+                                ? const Center(child: CircularProgressIndicator())
+                                : GridView.builder(
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 0.76,
+                                    ),
+                                    itemCount: pageCount,
+                                    itemBuilder: (context, index) => PageTile(
+                                      number: index + 1,
+                                      selected: selected.contains(index),
+                                      rotated: selected.contains(index),
+                                      onTap: () => vm.toggle(index),
+                                      onLongPress: () => showPagePreview(context, page: index + 1, total: pageCount),
+                                    ),
+                                  ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Center(
+                              child: Text(
+                                context.tr('file.pages', namedArgs: {'n': '$pageCount'}).toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.28,
+                                  color: Color(0xB35F5E60),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 20),
-                  Text(
-                    context.tr('rotate.subtitle'),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      for (final value in _angles) ...[
-                        _AnglePill(label: '$value°', selected: angle == value, onTap: () => vm.setAngle(value)),
-                        if (value != _angles.last) const SizedBox(width: 12),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
             ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppDimens.horizontalPadding, 8, AppDimens.horizontalPadding, 24),
-              child: PrimaryButton(
-                label: context.tr('rotate.action'),
-                enabled: file != null,
-                loading: running,
-                onTap: () => _run(context, vm),
+            if (file != null)
+              _RotateSummaryBar(
+                selectedCount: selectedCount,
+                total: pageCount,
+                dirLabel: dirLabel,
+                running: running,
+                onRun: () => _run(context, ref, vm),
               ),
-            ),
           ],
         ),
       ),
@@ -143,34 +156,189 @@ final class RotateScreen extends HookConsumerWidget {
   }
 }
 
-class _AnglePill extends StatelessWidget {
-  const _AnglePill({required this.label, required this.selected, required this.onTap});
+class _EmptyPicker extends StatelessWidget {
+  const _EmptyPicker({required this.onPick, required this.label});
 
+  final VoidCallback onPick;
   final String label;
-  final bool selected;
-  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
-          border: Border.all(color: selected ? AppColors.primary : AppColors.border),
-          borderRadius: BorderRadius.circular(9999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: selected ? AppColors.white : AppColors.text,
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
+      child: GestureDetector(
+        onTap: onPick,
+        child: Container(
+          height: AppDimens.ctaHeight,
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFD6D6DB)),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          child: Center(
+            child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
           ),
         ),
       ),
+    ),
+  );
+}
+
+class _SourceRow extends StatelessWidget {
+  const _SourceRow({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Row(
+      children: [
+        const Icon(Icons.description, size: 13, color: AppColors.textSecondary),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            fileName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _DirectionControl extends StatelessWidget {
+  const _DirectionControl({
+    required this.isRight,
+    required this.onSelectLeft,
+    required this.onSelectRight,
+  });
+
+  final bool isRight;
+  final VoidCallback onSelectLeft;
+  final VoidCallback onSelectRight;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 36,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF3F3F4),
+      borderRadius: BorderRadius.circular(9999),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: onSelectLeft,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isRight ? Colors.transparent : AppColors.white,
+                borderRadius: BorderRadius.circular(9999),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('↺', style: TextStyle(fontSize: 14, color: isRight ? AppColors.textSecondary : AppColors.text)),
+                  const SizedBox(width: 4),
+                  Text('90°', style: TextStyle(fontSize: 15, fontWeight: isRight ? FontWeight.w500 : FontWeight.w600, color: isRight ? AppColors.textSecondary : AppColors.text)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: GestureDetector(
+            onTap: onSelectRight,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isRight ? AppColors.white : Colors.transparent,
+                borderRadius: BorderRadius.circular(9999),
+                boxShadow: isRight ? const [BoxShadow(color: Color(0x0D000000), blurRadius: 1, offset: Offset(0, 1))] : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('↻', style: TextStyle(fontSize: 14, fontWeight: isRight ? FontWeight.w700 : FontWeight.w400, color: isRight ? AppColors.text : AppColors.textSecondary)),
+                  const SizedBox(width: 4),
+                  Text('90°', style: TextStyle(fontSize: 15, fontWeight: isRight ? FontWeight.w600 : FontWeight.w500, color: isRight ? AppColors.text : AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RotateSummaryBar extends StatelessWidget {
+  const _RotateSummaryBar({
+    required this.selectedCount,
+    required this.total,
+    required this.dirLabel,
+    required this.running,
+    required this.onRun,
+  });
+
+  final int selectedCount;
+  final int total;
+  final String dirLabel;
+  final bool running;
+  final VoidCallback onRun;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+    decoration: const BoxDecoration(
+      color: AppColors.white,
+      border: Border(top: BorderSide(color: AppColors.border)),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.tr('rotate.selected', namedArgs: {'sel': '$selectedCount', 'total': '$total'}),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.text),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                dirLabel,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: running ? null : onRun,
+          child: Opacity(
+            opacity: running ? 0.7 : 1,
+            child: Container(
+              height: AppDimens.ctaHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(color: const Color(0xFFB90D10), borderRadius: BorderRadius.circular(9999)),
+              child: Center(
+                child: running
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.white))
+                    : Text(
+                        context.tr('rotate.action', namedArgs: {'n': '$selectedCount'}),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.white),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

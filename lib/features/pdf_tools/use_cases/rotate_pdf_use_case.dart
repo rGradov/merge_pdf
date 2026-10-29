@@ -5,13 +5,14 @@ import 'package:merge_pdf/features/pdf_tools/repositories/repositories.dart';
 import 'package:merge_pdf/utils/result.dart';
 
 @injectable
-/// Rotates every page of one document.
-final class RotatePdfUseCase implements BaseUseCase2<PdfResult, PdfFile, int> {
+/// Rotates the selected pages of one document.
+final class RotatePdfUseCase implements BaseUseCase3<PdfResult, PdfFile, int, List<int>> {
   /// Creates the use case bound to [_repository].
   const RotatePdfUseCase(this._repository);
 
   final PdfToolsRepository _repository;
 
   @override
-  Future<Result<PdfResult>> call(PdfFile file, int degrees) => _repository.rotate(file, degrees);
+  Future<Result<PdfResult>> call(PdfFile file, int degrees, List<int> pages) =>
+      _repository.rotate(file, degrees, pages);
 }

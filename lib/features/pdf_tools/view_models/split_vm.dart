@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
+import 'package:merge_pdf/features/pdf_tools/repositories/repositories.dart';
 import 'package:merge_pdf/features/pdf_tools/services/services.dart';
 import 'package:merge_pdf/features/pdf_tools/use_cases/use_cases.dart';
 import 'package:merge_pdf/global.dart';
@@ -9,57 +10,75 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'split_vm.g.dart';
 
+/// How the split screen groups the selected pages.
+enum SplitSelectionMode {
+  /// One output file per selected page.
+  separate,
+
+  /// One output file containing every selected page.
+  extract,
+}
+
 /// Screen state and actions for the split flow.
 final class SplitVm {
   /// Selected source document.
   final ValueNotifier<PdfFile?> file = ValueNotifier(null);
 
-  /// Split strategy.
-  final ValueNotifier<SplitMode> mode = ValueNotifier(SplitMode.everyPage);
+  /// Split grouping mode.
+  final ValueNotifier<SplitSelectionMode> mode = ValueNotifier(SplitSelectionMode.separate);
 
-  /// Raw ranges input for [SplitMode.ranges].
-  final ValueNotifier<String> rangesText = ValueNotifier('');
+  /// 0-based indices of the pages to keep.
+  final ValueNotifier<Set<int>> selected = ValueNotifier({});
+
+  String? _initializedFor;
 
   /// Runs the split action on the current state.
-  late final Command0<List<PdfResult>> split = Command0(() {
+  late final Command0<List<PdfResult>> split = Command0(() async {
     final current = file.value;
     if (current == null) {
-      return Future.value(Result.failure<List<PdfResult>>(Exception('no_file')));
+      return Result.failure<List<PdfResult>>(Exception('no_file'));
     }
-    final ranges = _parseRanges(rangesText.value);
-    if (mode.value == SplitMode.ranges && ranges == null) {
-      return Future.value(Result.failure<List<PdfResult>>(Exception('bad_ranges')));
+    final pages = selected.value.toList()..sort();
+    if (pages.isEmpty) {
+      return Result.failure<List<PdfResult>>(Exception('no_file'));
     }
-    return getIt.get<SplitPdfUseCase>().call(current, mode.value, ranges ?? const []);
+    if (mode.value == SplitSelectionMode.extract) {
+      final result = await getIt.get<PdfToolsRepository>().extract(current, pages);
+      return switch (result) {
+        Success(:final value) => Result.success([value]),
+        Failure(:final error) => Result.failure<List<PdfResult>>(error),
+      };
+    }
+    final ranges = [for (final p in pages) (p, p)];
+    return getIt.get<SplitPdfUseCase>().call(current, SplitMode.ranges, ranges);
   });
 
-  /// Sets the selected document.
-  void setFile(PdfFile? value) => file.value = value;
-
-  /// Sets the split strategy.
-  void setMode(SplitMode value) => mode.value = value;
-
-  /// Sets the raw ranges input.
-  void setRanges(String value) => rangesText.value = value;
-
-  List<(int, int)>? _parseRanges(String raw) {
-    final parts = raw.split(',').map((part) => part.trim()).where((part) => part.isNotEmpty).toList();
-    if (parts.isEmpty) return null;
-    final result = <(int, int)>[];
-    for (final part in parts) {
-      final sides = part.split('-');
-      final start = int.tryParse(sides.first.trim());
-      if (start == null || start < 1) return null;
-      if (sides.length == 1) {
-        result.add((start - 1, start - 1));
-        continue;
-      }
-      final end = int.tryParse(sides.last.trim());
-      if (end == null || end < start) return null;
-      result.add((start - 1, end - 1));
-    }
-    return result;
+  /// Sets the selected document and resets the selection for a new file.
+  void setFile(PdfFile? value) {
+    if (value?.path != file.value?.path) _initializedFor = null;
+    file.value = value;
   }
+
+  /// Sets the split grouping mode.
+  void setMode(SplitSelectionMode value) => mode.value = value;
+
+  /// Selects every page of [path] once when the page count first resolves.
+  void ensureInitialized(String path, int pageCount) {
+    if (_initializedFor != path) {
+      _initializedFor = path;
+      selected.value = {for (var i = 0; i < pageCount; i++) i};
+    }
+  }
+
+  /// Toggles a page in the selection.
+  void toggle(int page) {
+    final next = Set<int>.of(selected.value);
+    if (!next.add(page)) next.remove(page);
+    selected.value = next;
+  }
+
+  /// Clears the current selection.
+  void clearSelection() => selected.value = {};
 }
 
 /// Provides the split screen view model.

@@ -37,22 +37,8 @@ final class HomeScreen extends HookConsumerWidget {
     );
   }
 
-  Future<void> _freeUpSpace(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.white,
-        title: Text(context.tr('home.storage.free')),
-        content: Text(context.tr('settings.storage')),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(context.tr('common.cancel'))),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _freeUpSpace(BuildContext context, WidgetRef ref, int count, int sizeBytes) async {
+    final confirmed = await showFreeUpSheet(context, count: count, sizeBytes: sizeBytes);
     if (confirmed != true) return;
     await getIt.get<ClearStorageUseCase>().call();
     ref.invalidate(recentFilesProvider);
@@ -101,7 +87,7 @@ final class HomeScreen extends HookConsumerWidget {
                       HasData(:final data) => _RecentsList(
                         files: data,
                         onMore: (file) => _onMore(context, ref, vm, file),
-                        onFreeUp: () => _freeUpSpace(context, ref),
+                        onFreeUp: (count, sizeBytes) => _freeUpSpace(context, ref, count, sizeBytes),
                       ),
                       NoData() => Center(
                         child: EmptyState(
@@ -156,7 +142,7 @@ class _RecentsList extends StatelessWidget {
 
   final List<RecentFile> files;
   final ValueChanged<RecentFile> onMore;
-  final VoidCallback onFreeUp;
+  final void Function(int count, int sizeBytes) onFreeUp;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +168,7 @@ class _RecentsList extends StatelessWidget {
         const SizedBox(height: 6),
         StorageTile(
           usedLabel: context.tr('home.storage.used', namedArgs: {'n': usedMb}),
-          onFreeUp: onFreeUp,
+          onFreeUp: () => onFreeUp(files.length, totalBytes),
         ),
       ],
     );
