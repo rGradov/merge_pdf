@@ -107,6 +107,8 @@ final class SplitScreen extends HookConsumerWidget {
                                     ),
                                     itemCount: pageCount,
                                     itemBuilder: (context, index) => PageTile(
+                                      path: file.path,
+                                      page: index,
                                       number: index + 1,
                                       selected: selected.contains(index),
                                       onTap: () => vm.toggle(index),
@@ -194,6 +196,22 @@ class _SplitSummaryBar extends StatelessWidget {
           Row(
             children: [
               Expanded(
+                child: Text(
+                  context.tr('split.saveUnselected'),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.text),
+                ),
+              ),
+              Switch(
+                value: saveUnselected,
+                activeThumbColor: AppColors.primary,
+                onChanged: onToggleUnselected,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -226,22 +244,6 @@ class _SplitSummaryBar extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.tr('split.saveUnselected'),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.text),
-                ),
-              ),
-              Switch(
-                value: saveUnselected,
-                activeThumbColor: AppColors.primary,
-                onChanged: onToggleUnselected,
               ),
             ],
           ),

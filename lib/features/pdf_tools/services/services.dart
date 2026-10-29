@@ -41,7 +41,7 @@ abstract interface class PdfEngineService {
   Future<EmptyResult> rotatePages(String path, Map<int, int> pages, String outputPath);
 
   /// Renders the 0-based [pageIndex] as PNG bytes, capped to [maxDim] pixels.
-  Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim});
+  Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim = 800});
 }
 
 /// Persistence of the recent files list.

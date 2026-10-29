@@ -115,9 +115,10 @@ final class RotateScreen extends HookConsumerWidget {
                                     ),
                                     itemCount: pageCount,
                                     itemBuilder: (context, index) => PageTile(
+                                      path: file.path,
+                                      page: index,
                                       number: index + 1,
                                       selected: selected.contains(index),
-                                      rotated: selected.contains(index),
                                       onTap: () => vm.toggle(index),
                                       onLongPress: () => showPdfPreview(context, path: file.path, page: index, total: pageCount),
                                     ),

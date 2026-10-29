@@ -4,6 +4,7 @@ export 'main_app_bar.dart';
 export 'page_preview.dart';
 export 'page_tile.dart';
 export 'pdf_doc_badge.dart';
+export 'pdf_page_image.dart';
 export 'primary_button.dart';
 export 'recent_tile.dart';
 export 'section_header.dart';
