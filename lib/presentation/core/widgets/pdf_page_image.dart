@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 import 'package:merge_pdf/features/pdf_tools/services/services.dart';
 import 'package:merge_pdf/global.dart';
+import 'package:merge_pdf/presentation/core/widgets/shimmer.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
 
@@ -80,9 +81,7 @@ class _PdfPageImageState extends State<PdfPageImage> with AutomaticKeepAliveClie
       return Center(child: Icon(Icons.description, size: 20, color: AppColors.textHint));
     }
     if (_bytes == null) {
-      return const Center(
-        child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-      );
+      return const ShimmerBox(borderRadius: 0);
     }
     return Image.memory(_bytes!, fit: widget.fit);
   }

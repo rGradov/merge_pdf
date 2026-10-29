@@ -327,7 +327,7 @@ class _PageRenderState extends State<_PageRender> {
     if (_failed) {
       return Center(child: Text(context.tr('error.unknown'), style: const TextStyle(color: AppColors.textSecondary)));
     }
-    if (_bytes == null) return const Center(child: CircularProgressIndicator());
+    if (_bytes == null) return const ShimmerBox(borderRadius: 0);
     return Image.memory(_bytes!, fit: BoxFit.contain);
   }
 }

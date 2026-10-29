@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:merge_pdf/features/pdf_tools/services/services.dart';
 import 'package:merge_pdf/global.dart';
+import 'package:merge_pdf/presentation/core/widgets/shimmer.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
 
@@ -158,7 +159,7 @@ class _PageRenderState extends State<_PageRender> {
     if (_failed) {
       return Center(child: Text(context.tr('error.unknown'), style: const TextStyle(color: AppColors.textSecondary)));
     }
-    if (_bytes == null) return const Center(child: CircularProgressIndicator());
+    if (_bytes == null) return const ShimmerBox(borderRadius: AppDimens.radiusPage);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimens.radiusPage),
       child: Image.memory(_bytes!, fit: BoxFit.contain),

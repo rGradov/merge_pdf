@@ -8,6 +8,7 @@ export 'pdf_page_image.dart';
 export 'primary_button.dart';
 export 'recent_tile.dart';
 export 'section_header.dart';
+export 'shimmer.dart';
 export 'step_row.dart';
 export 'storage_tile.dart';
 export 'tool_app_bar.dart';
