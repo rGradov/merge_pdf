@@ -148,12 +148,20 @@ class _MergeFileTile extends StatelessWidget {
       },
       _ => null,
     };
+    final pageCount = switch (pages) {
+      AsyncData(:final value) => value.valueOrNull ?? 0,
+      _ => 0,
+    };
     final meta = pageText == null
         ? formatBytes(context, file.sizeBytes)
         : '$pageText · ${formatBytes(context, file.sizeBytes)}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
+      child: GestureDetector(
+        onTap: () => showPagePreview(context, page: 1, total: pageCount == 0 ? 1 : pageCount),
+        onLongPress: () => showPagePreview(context, page: 1, total: pageCount == 0 ? 1 : pageCount),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
         height: AppDimens.recentTileHeight,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
@@ -202,6 +210,7 @@ class _MergeFileTile extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

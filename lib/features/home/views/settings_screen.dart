@@ -46,7 +46,6 @@ final class SettingsScreen extends HookConsumerWidget {
             ToolAppBar(
               title: context.tr('settings.title'),
               onBack: () => Navigator.of(context).maybePop(),
-              trailing: const ToolAccentDot(icon: Icons.settings),
             ),
             Expanded(
               child: ListView(

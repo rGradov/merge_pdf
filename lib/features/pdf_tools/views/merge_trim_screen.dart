@@ -112,7 +112,8 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
               ),
             ),
             Expanded(
-              child: Column(
+              child: ListView(
+                padding: EdgeInsets.zero,
                 children: [
                   _PreviewArea(file: activeFile, range: activeRange, total: activeTotal),
                   const Divider(height: 1, thickness: 1, color: AppColors.border),
@@ -301,41 +302,46 @@ class _Filmstrip extends StatelessWidget {
         final range = ranges[file.path] ?? (0, (total - 1).clamp(0, total));
         return GestureDetector(
           onTap: () => onSelect(index),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    file.name,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: isActive ? AppColors.text : AppColors.textSecondary,
+          child: SizedBox(
+            width: isActive ? 280 : 88,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        file.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isActive ? AppColors.text : AppColors.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isActive
-                        ? context.tr('merge.trim.keepPages', namedArgs: {'a': '${range.$1 + 1}', 'b': '${range.$2 + 1}'})
-                        : context.tr('merge.trim.shortPages', namedArgs: {'n': '$total'}),
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              if (isActive)
-                _ActiveClip(
-                  total: total,
-                  range: range,
-                  onSetStart: (value) => onSetStart(file.path, value),
-                  onSetEnd: (value) => onSetEnd(file.path, value),
-                )
-              else
-                _MiniClip(total: total),
-            ],
+                    const SizedBox(width: 6),
+                    Text(
+                      isActive
+                          ? context.tr('merge.trim.keepPages', namedArgs: {'a': '${range.$1 + 1}', 'b': '${range.$2 + 1}'})
+                          : context.tr('merge.trim.shortPages', namedArgs: {'n': '$total'}),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                if (isActive)
+                  _ActiveClip(
+                    total: total,
+                    range: range,
+                    onSetStart: (value) => onSetStart(file.path, value),
+                    onSetEnd: (value) => onSetEnd(file.path, value),
+                  )
+                else
+                  _MiniClip(total: total),
+              ],
+            ),
           ),
         );
       },
@@ -365,35 +371,39 @@ class _ActiveClip extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final sliceWidth = clipWidth / (total == 0 ? 1 : total);
+          final sliceWidth = constraints.maxWidth / (total == 0 ? 1 : total);
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < total; i++)
-                      Container(
-                        width: sliceWidth,
-                        decoration: BoxDecoration(
-                          color: i >= range.$1 && i <= range.$2 ? AppColors.white : const Color(0x66DADADB),
-                          border: Border(right: BorderSide(color: AppColors.border, width: i == total - 1 ? 0 : 1)),
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < total; i++)
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: i >= range.$1 && i <= range.$2 ? AppColors.white : const Color(0x66DADADB),
+                              border: Border(right: BorderSide(color: AppColors.border, width: i == total - 1 ? 0 : 1)),
+                            ),
+                            child: i >= range.$1 && i <= range.$2
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: const [
+                                        SizedBox(width: 12, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.line))),
+                                        SizedBox(height: 6),
+                                        SizedBox(width: 10, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.line))),
+                                      ],
+                                    ),
+                                  )
+                                : null,
+                          ),
                         ),
-                        child: i >= range.$1 && i <= range.$2
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    SizedBox(width: 12, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.line))),
-                                    SizedBox(height: 6),
-                                    SizedBox(width: 10, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.line))),
-                                  ],
-                                ),
-                              )
-                            : null,
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Positioned(

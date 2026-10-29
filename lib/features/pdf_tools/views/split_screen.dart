@@ -75,15 +75,6 @@ final class SplitScreen extends HookConsumerWidget {
             ToolAppBar(
               title: context.tr('split.title'),
               onBack: () => Navigator.of(context).maybePop(),
-              trailing: file == null
-                  ? null
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ToolTextAction(label: context.tr('split.clear'), onTap: vm.clearSelection),
-                        const ToolAccentDot(icon: Icons.content_cut),
-                      ],
-                    ),
             ),
             Expanded(
               child: file == null

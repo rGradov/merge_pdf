@@ -55,7 +55,7 @@ final class ResultScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
                 child: Column(
                   children: [
-                    const Spacer(),
+                    const SizedBox(height: 48),
                     Container(
                       width: 72,
                       height: 72,
@@ -75,8 +75,8 @@ final class ResultScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 32),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 340),
+                    SizedBox(
+                      width: double.infinity,
                       child: results.length == 1
                           ? _ResultCard(result: result)
                           : Column(

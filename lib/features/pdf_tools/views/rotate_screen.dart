@@ -77,15 +77,6 @@ final class RotateScreen extends HookConsumerWidget {
             ToolAppBar(
               title: context.tr('rotate.title'),
               onBack: () => Navigator.of(context).maybePop(),
-              trailing: file == null
-                  ? null
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ToolTextAction(label: context.tr('rotate.reset'), onTap: vm.clearSelection),
-                        const ToolAccentDot(icon: Icons.refresh),
-                      ],
-                    ),
             ),
             Expanded(
               child: file == null

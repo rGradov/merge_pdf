@@ -111,11 +111,11 @@ class _Blueprint extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          _Line(width: double.infinity),
+          _Line(width: 1.0),
           SizedBox(height: 6),
           _Line(width: 0.72),
           SizedBox(height: 6),
-          _Line(width: double.infinity),
+          _Line(width: 1.0),
           SizedBox(height: 6),
           _Line(width: 0.55),
           SizedBox(height: 8),
