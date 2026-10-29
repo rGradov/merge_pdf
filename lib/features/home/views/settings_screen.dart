@@ -71,7 +71,10 @@ final class SettingsScreen extends HookConsumerWidget {
                 horizontal: AppDimens.horizontalPadding,
               ),
               child: StorageTile(
-                usedLabel: context.tr('home.storage.used', args: [usedMb]),
+                usedLabel: context.tr(
+                  'home.storage.used',
+                  namedArgs: {'n': usedMb},
+                ),
                 onFreeUp: () => _freeUpSpace(context, ref),
               ),
             ),

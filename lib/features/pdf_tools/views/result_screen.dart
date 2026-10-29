@@ -70,7 +70,7 @@ final class ResultScreen extends StatelessWidget {
                     if (results.length > 1) ...[
                       const SizedBox(height: 4),
                       Text(
-                        context.tr('result.files', args: ['${results.length}']),
+                        context.tr('result.files', namedArgs: {'n': '${results.length}'}),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
@@ -145,8 +145,8 @@ class _ResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final sizeMb = (result.sizeBytes / 1024 / 1024).toStringAsFixed(1);
     final meta =
-        '${context.tr('file.pages', args: ['${result.pages}'])} · '
-        '${context.tr('file.size', args: [sizeMb])}';
+        '${context.tr('file.pages', namedArgs: {'n': '${result.pages}'})} · '
+        '${context.tr('file.size', namedArgs: {'n': sizeMb})}';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppDimens.radiusCard)),

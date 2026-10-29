@@ -166,7 +166,7 @@ class _RecentsList extends StatelessWidget {
       children: [
         SectionHeader(
           title: context.tr('home.recent'),
-          trailing: context.tr('home.recent.count', args: ['${files.length}']),
+          trailing: context.tr('home.recent.count', namedArgs: {'n': '${files.length}'}),
         ),
         const SizedBox(height: 12),
         for (final file in files)
@@ -181,7 +181,7 @@ class _RecentsList extends StatelessWidget {
           ),
         const SizedBox(height: 6),
         StorageTile(
-          usedLabel: context.tr('home.storage.used', args: [usedMb]),
+          usedLabel: context.tr('home.storage.used', namedArgs: {'n': usedMb}),
           onFreeUp: onFreeUp,
         ),
       ],

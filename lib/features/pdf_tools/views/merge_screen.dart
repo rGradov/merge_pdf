@@ -59,7 +59,7 @@ final class MergeScreen extends HookConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
               child: Text(
-                context.tr('merge.subtitle', args: ['${files.length}']),
+                context.tr('merge.subtitle', namedArgs: {'n': '${files.length}'}),
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
               ),
             ),
@@ -128,7 +128,7 @@ class _FileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sizeMb = (file.sizeBytes / 1024 / 1024).toStringAsFixed(1);
-    final meta = context.tr('file.size', args: [sizeMb]);
+    final meta = context.tr('file.size', namedArgs: {'n': sizeMb});
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(

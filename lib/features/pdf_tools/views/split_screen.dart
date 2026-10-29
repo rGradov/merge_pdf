@@ -154,7 +154,7 @@ class _SelectedFileTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final pagesText = switch (pages) {
       AsyncData(:final value) => switch (value) {
-        Success(:final value) => context.tr('split.subtitle', args: ['$value']),
+        Success(:final value) => context.tr('split.subtitle', namedArgs: {'n': '$value'}),
         Failure() => '',
       },
       _ => '',

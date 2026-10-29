@@ -70,18 +70,18 @@ final class RecentTile extends StatelessWidget {
 
 /// Builds the meta line of a [RecentFile] in the active locale.
 String recentFileMeta(BuildContext context, RecentFile file) {
-  final pages = context.tr('file.pages', args: ['${file.pages}']);
+  final pages = context.tr('file.pages', namedArgs: {'n': '${file.pages}'});
   final sizeMb = (file.sizeBytes / 1024 / 1024).toStringAsFixed(1);
-  final size = context.tr('file.size', args: [sizeMb]);
+  final size = context.tr('file.size', namedArgs: {'n': sizeMb});
   final when = _ago(context, file.createdAt);
   return '$pages · $size · $when';
 }
 
 String _ago(BuildContext context, DateTime createdAt) {
   final delta = DateTime.now().difference(createdAt);
-  if (delta.inHours < 1) return context.tr('file.ago_hours', args: ['1']);
+  if (delta.inHours < 1) return context.tr('file.ago_hours', namedArgs: {'n': '1'});
   if (delta.inHours < 24) {
-    return context.tr('file.ago_hours', args: ['${delta.inHours}']);
+    return context.tr('file.ago_hours', namedArgs: {'n': '${delta.inHours}'});
   }
   if (delta.inDays < 2) return context.tr('file.yesterday');
   final local = createdAt.toLocal();
