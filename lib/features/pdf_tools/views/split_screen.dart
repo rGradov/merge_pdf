@@ -10,7 +10,8 @@ import 'package:merge_pdf/presentation/core/widgets/widgets.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
 
-/// Split flow: pick a document, select pages, split or extract.
+/// Split flow: pick a document, select pages to extract, optionally also save
+/// the unselected pages as a second PDF.
 final class SplitScreen extends HookConsumerWidget {
   /// Creates the split screen.
   const SplitScreen({super.key});
@@ -34,14 +35,14 @@ final class SplitScreen extends HookConsumerWidget {
     return true;
   }
 
-  Future<void> _run(BuildContext context, WidgetRef ref, SplitVm vm, int selectedCount) async {
+  Future<void> _run(BuildContext context, WidgetRef ref, SplitVm vm) async {
     final result = await vm.split.call();
     if (!context.mounted) return;
     switch (result) {
       case Success(:final value):
         ref.invalidate(recentFilesProvider);
         await Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => ResultScreen(results: value, sourceCount: selectedCount)),
+          MaterialPageRoute<void>(builder: (_) => ResultScreen(results: value, sourceCount: value.length)),
         );
       case Failure(:final error):
         _showError(context, error);
@@ -52,18 +53,12 @@ final class SplitScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(splitVmProvider);
     final file = useValueListenable(vm.file);
-    final mode = useValueListenable(vm.mode);
     final selected = useValueListenable(vm.selected);
+    final saveUnselected = useValueListenable(vm.saveUnselected);
     final running = useValueListenable(vm.split.isRunning);
 
     final pagesValue = file == null ? null : ref.watch(pdfPagesProvider(file.path));
     final pageCount = pagesValue?.value?.valueOrNull ?? 0;
-
-    useEffect(() {
-      final current = file;
-      if (current != null && pageCount > 0) vm.ensureInitialized(current.path, pageCount);
-      return null;
-    }, [file?.path, pageCount]);
 
     // Pick the source document immediately instead of showing a separate
     // "select a PDF" screen. Cancelling returns to the previous screen.
@@ -79,7 +74,6 @@ final class SplitScreen extends HookConsumerWidget {
     }, const []);
 
     final selectedCount = selected.length;
-    final total = pageCount;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -101,14 +95,6 @@ final class SplitScreen extends HookConsumerWidget {
                         children: [
                           _SourceRow(fileName: file.name),
                           const SizedBox(height: 12),
-                          _SegmentedControl(
-                            left: context.tr('split.mode.separate'),
-                            right: context.tr('split.mode.extract'),
-                            isRight: mode == SplitSelectionMode.extract,
-                            onSelectLeft: () => vm.setMode(SplitSelectionMode.separate),
-                            onSelectRight: () => vm.setMode(SplitSelectionMode.extract),
-                          ),
-                          const SizedBox(height: 16),
                           Expanded(
                             child: pageCount == 0
                                 ? const Center(child: CircularProgressIndicator())
@@ -124,7 +110,7 @@ final class SplitScreen extends HookConsumerWidget {
                                       number: index + 1,
                                       selected: selected.contains(index),
                                       onTap: () => vm.toggle(index),
-                                      onLongPress: () => showPagePreview(context, page: index + 1, total: pageCount),
+                                      onLongPress: () => showPdfPreview(context, path: file.path, page: index, total: pageCount),
                                     ),
                                   ),
                           ),
@@ -135,11 +121,11 @@ final class SplitScreen extends HookConsumerWidget {
             if (file != null)
               _SplitSummaryBar(
                 selectedCount: selectedCount,
-                total: total,
-                sizeBytes: file.sizeBytes,
-                extract: mode == SplitSelectionMode.extract,
+                total: pageCount,
+                saveUnselected: saveUnselected,
                 running: running,
-                onRun: () => _run(context, ref, vm, selectedCount),
+                onToggleUnselected: (value) => vm.saveUnselected.value = value,
+                onRun: () => _run(context, ref, vm),
               ),
           ],
         ),
@@ -175,147 +161,89 @@ class _SourceRow extends StatelessWidget {
   );
 }
 
-class _SegmentedControl extends StatelessWidget {
-  const _SegmentedControl({
-    required this.left,
-    required this.right,
-    required this.isRight,
-    required this.onSelectLeft,
-    required this.onSelectRight,
-  });
-
-  final String left;
-  final String right;
-  final bool isRight;
-  final VoidCallback onSelectLeft;
-  final VoidCallback onSelectRight;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 36,
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: const Color(0xFFEEEEEF),
-      borderRadius: BorderRadius.circular(9999),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: onSelectLeft,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isRight ? Colors.transparent : AppColors.white,
-                borderRadius: BorderRadius.circular(9999),
-                boxShadow: isRight
-                    ? null
-                    : const [BoxShadow(color: Color(0x0D000000), blurRadius: 1, offset: Offset(0, 1))],
-              ),
-              child: Text(
-                left,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isRight ? AppColors.textSecondary : AppColors.text,
-                ),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: onSelectRight,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isRight ? AppColors.white : Colors.transparent,
-                borderRadius: BorderRadius.circular(9999),
-                boxShadow: isRight
-                    ? const [BoxShadow(color: Color(0x0D000000), blurRadius: 1, offset: Offset(0, 1))]
-                    : null,
-              ),
-              child: Text(
-                right,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isRight ? AppColors.text : AppColors.textSecondary,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class _SplitSummaryBar extends StatelessWidget {
   const _SplitSummaryBar({
     required this.selectedCount,
     required this.total,
-    required this.sizeBytes,
-    required this.extract,
+    required this.saveUnselected,
     required this.running,
+    required this.onToggleUnselected,
     required this.onRun,
   });
 
   final int selectedCount;
   final int total;
-  final int sizeBytes;
-  final bool extract;
+  final bool saveUnselected;
   final bool running;
+  final ValueChanged<bool> onToggleUnselected;
   final VoidCallback onRun;
 
   @override
   Widget build(BuildContext context) {
-    final action = extract
-        ? context.tr('split.extractAction', namedArgs: {'n': '$selectedCount'})
-        : context.tr('split.separateAction', namedArgs: {'n': '$selectedCount'});
+    final action = context.tr('split.extractAction', namedArgs: {'n': '$selectedCount'});
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       decoration: const BoxDecoration(
         color: AppColors.white,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  context.tr('split.selected', namedArgs: {'sel': '$selectedCount', 'total': '$total'}),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.text),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  context.tr('split.selectedMeta', namedArgs: {'pages': '$selectedCount', 'size': formatBytes(context, sizeBytes)}),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: running ? null : onRun,
-            child: Opacity(
-              opacity: running ? 0.7 : 1,
-              child: Container(
-                height: AppDimens.ctaHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                decoration: BoxDecoration(color: const Color(0xFFDE2E27), borderRadius: BorderRadius.circular(9999)),
-                child: Center(
-                  child: running
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.white))
-                      : Text(action, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.tr('split.selected', namedArgs: {'sel': '$selectedCount', 'total': '$total'}),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.text),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.tr('split.hint'),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: running || selectedCount == 0 ? null : onRun,
+                child: Opacity(
+                  opacity: selectedCount == 0 ? 0.5 : 1,
+                  child: Container(
+                    height: AppDimens.ctaHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    decoration: BoxDecoration(color: const Color(0xFFDE2E27), borderRadius: BorderRadius.circular(9999)),
+                    child: Center(
+                      child: running
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.white))
+                          : Text(action, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.white)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.tr('split.saveUnselected'),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.text),
+                ),
+              ),
+              Switch(
+                value: saveUnselected,
+                activeThumbColor: AppColors.primary,
+                onChanged: onToggleUnselected,
+              ),
+            ],
           ),
         ],
       ),

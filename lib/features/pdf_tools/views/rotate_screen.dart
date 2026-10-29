@@ -59,12 +59,6 @@ final class RotateScreen extends HookConsumerWidget {
     final pagesValue = file == null ? null : ref.watch(pdfPagesProvider(file.path));
     final pageCount = pagesValue?.value?.valueOrNull ?? 0;
 
-    useEffect(() {
-      final current = file;
-      if (current != null && pageCount > 0) vm.ensureInitialized(current.path, pageCount);
-      return null;
-    }, [file?.path, pageCount]);
-
     // Pick the source document immediately instead of showing a separate
     // "select a PDF" screen. Cancelling returns to the previous screen.
     useEffect(() {
@@ -125,7 +119,7 @@ final class RotateScreen extends HookConsumerWidget {
                                       selected: selected.contains(index),
                                       rotated: selected.contains(index),
                                       onTap: () => vm.toggle(index),
-                                      onLongPress: () => showPagePreview(context, page: index + 1, total: pageCount),
+                                      onLongPress: () => showPdfPreview(context, path: file.path, page: index, total: pageCount),
                                     ),
                                   ),
                           ),

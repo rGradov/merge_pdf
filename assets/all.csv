@@ -42,16 +42,14 @@ merge.totalSize,Total size: {n},Общий размер: {n}
 merge.trim.keepPages,Keep pages {a}–{b},Оставить страницы {a}–{b}
 merge.trim.shortPages,{n} p.,{n} стр.
 merge.trim.add,Add,Добавить
+merge.processing,Merging…,Объединение…
 page.of,Page {a} of {b},Страница {a} из {b}
 split.title,Split Document,Разделить документ
 split.select,Select a PDF,Выберите PDF
-split.mode.separate,Separate,Разделить
-split.mode.extract,Extract,Извлечь
-split.clear,Clear,Очистить
+split.hint,Select pages to extract,Выберите страницы для извлечения
+split.saveUnselected,Save unselected as separate PDF,Сохранить невыделенные как отдельный PDF
 split.selected,{sel} of {total} selected,Выбрано {sel} из {total}
-split.selectedMeta,{pages} pages · {size},{pages} страниц · {size}
 split.extractAction,Extract {n} pages,Извлечь {n} страниц
-split.separateAction,Separate {n} pages,Разделить {n} страниц
 rotate.title,Rotate,Повернуть
 rotate.select,Select a PDF,Выберите PDF
 rotate.reset,Reset,Сбросить

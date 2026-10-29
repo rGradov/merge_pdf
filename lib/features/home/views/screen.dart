@@ -161,7 +161,7 @@ class _RecentsList extends StatelessWidget {
             child: RecentTile(
               name: file.name,
               subtitle: recentFileMeta(context, file),
-              onTap: () => showPagePreview(context, page: 1, total: file.pages == 0 ? 1 : file.pages),
+              onTap: () => showPdfPreview(context, path: file.path, page: 0, total: file.pages == 0 ? 1 : file.pages),
               onMore: () => onMore(file),
             ),
           ),

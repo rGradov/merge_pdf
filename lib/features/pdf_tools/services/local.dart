@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:injectable/injectable.dart';
 import 'package:merge_pdf/core/services/services.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
@@ -147,6 +148,28 @@ final class LocalPdfEngineService implements PdfEngineService {
       }
     } on Exception catch (e) {
       return Result.failure<Empty>(e);
+    } finally {
+      await pdf.dispose();
+    }
+  }
+
+  @override
+  Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim = 800}) async {
+    final pdf = Pdf();
+    try {
+      final doc = await pdf.open(FileSource(File(path)));
+      try {
+        final rendered = await doc
+            .render(pages: PdfPages.single(pageIndex), size: PdfRenderSize.thumbnail(maxDim))
+            .first;
+        return Result.success(rendered.data);
+      } on Exception catch (e) {
+        return Result.failure<Uint8List>(e);
+      } finally {
+        await doc.dispose();
+      }
+    } on Exception catch (e) {
+      return Result.failure<Uint8List>(e);
     } finally {
       await pdf.dispose();
     }

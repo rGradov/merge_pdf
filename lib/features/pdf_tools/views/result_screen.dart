@@ -55,7 +55,7 @@ final class ResultScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
                 child: Column(
                   children: [
-                    const SizedBox(height: 48),
+                    const Spacer(),
                     Container(
                       width: 72,
                       height: 72,
@@ -107,7 +107,7 @@ final class ResultScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
                     ),
                     child: Text(
-                      context.tr('result.save'),
+                      context.tr('common.open'),
                       style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
                     ),
                   ),
@@ -139,36 +139,40 @@ class _ResultCard extends StatelessWidget {
     final meta =
         '${context.tr('file.pages', namedArgs: {'n': '${result.pages}'})} · '
         '${formatBytes(context, result.sizeBytes)}';
-    return Container(
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Row(
-        children: [
-          const PdfDocBadge(),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  result.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.text),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  meta,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => showPdfPreview(context, path: result.path, page: 0, total: result.pages == 0 ? 1 : result.pages),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        child: Row(
+          children: [
+            const PdfDocBadge(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    result.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.text),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    meta,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

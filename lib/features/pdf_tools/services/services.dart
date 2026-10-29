@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
 import 'package:merge_pdf/utils/result.dart';
 
@@ -38,6 +39,9 @@ abstract interface class PdfEngineService {
   /// Rotates only the pages in [pages] (0-based index → degrees) and writes the
   /// full document to [outputPath].
   Future<EmptyResult> rotatePages(String path, Map<int, int> pages, String outputPath);
+
+  /// Renders the 0-based [pageIndex] as PNG bytes, capped to [maxDim] pixels.
+  Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim});
 }
 
 /// Persistence of the recent files list.

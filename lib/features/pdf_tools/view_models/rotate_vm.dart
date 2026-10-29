@@ -28,8 +28,6 @@ final class RotateVm {
   /// 0-based indices of the pages to rotate.
   final ValueNotifier<Set<int>> selected = ValueNotifier({});
 
-  String? _initializedFor;
-
   /// Effective rotation degrees: clockwise is 90, counter-clockwise is 270.
   int get degrees => direction.value == RotateDirection.clockwise ? 90 : 270;
 
@@ -48,20 +46,12 @@ final class RotateVm {
 
   /// Sets the selected document and resets the selection for a new file.
   void setFile(PdfFile? value) {
-    if (value?.path != file.value?.path) _initializedFor = null;
+    if (value?.path != file.value?.path) selected.value = {};
     file.value = value;
   }
 
   /// Sets the rotation direction.
   void setDirection(RotateDirection value) => direction.value = value;
-
-  /// Selects every page of [path] once when the page count first resolves.
-  void ensureInitialized(String path, int pageCount) {
-    if (_initializedFor != path) {
-      _initializedFor = path;
-      selected.value = {for (var i = 0; i < pageCount; i++) i};
-    }
-  }
 
   /// Toggles a page in the selection.
   void toggle(int page) {

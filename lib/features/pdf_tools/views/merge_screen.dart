@@ -57,17 +57,6 @@ final class MergeScreen extends HookConsumerWidget {
               title: context.tr('merge.title'),
               titleSize: 28,
               onBack: () => Navigator.of(context).maybePop(),
-              trailing: files.isEmpty
-                  ? null
-                  : GestureDetector(
-                      onTap: vm.clear,
-                      behavior: HitTestBehavior.opaque,
-                      child: const SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Center(child: Icon(Icons.delete_outline, size: 22, color: AppColors.textSecondary)),
-                      ),
-                    ),
             ),
             Expanded(
               child: files.isEmpty
@@ -158,8 +147,8 @@ class _MergeFileTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
-        onTap: () => showPagePreview(context, page: 1, total: pageCount == 0 ? 1 : pageCount),
-        onLongPress: () => showPagePreview(context, page: 1, total: pageCount == 0 ? 1 : pageCount),
+        onTap: () => showPdfPreview(context, path: file.path, page: 0, total: pageCount == 0 ? 1 : pageCount),
+        onLongPress: () => showPdfPreview(context, path: file.path, page: 0, total: pageCount == 0 ? 1 : pageCount),
         behavior: HitTestBehavior.opaque,
         child: Container(
         height: AppDimens.recentTileHeight,

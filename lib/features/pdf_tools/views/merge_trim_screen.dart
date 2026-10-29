@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
 import 'package:merge_pdf/features/pdf_tools/repositories/repositories.dart';
+import 'package:merge_pdf/features/pdf_tools/services/services.dart';
 import 'package:merge_pdf/features/pdf_tools/view_models/view_models.dart';
 import 'package:merge_pdf/features/pdf_tools/views/result_screen.dart';
 import 'package:merge_pdf/global.dart';
@@ -28,20 +31,29 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
   final Map<String, (int, int)> _ranges = {};
   bool _initialized = false;
   Map<String, int> _countsCache = const {};
+  int _previewPage = 0;
 
   List<PdfFile> get _files => widget.files;
 
   void _setStart(String path, int value) {
     final range = _ranges[path];
     if (range == null) return;
-    setState(() => _ranges[path] = (value.clamp(0, range.$2), range.$2));
+    final start = value.clamp(0, range.$2);
+    setState(() {
+      _ranges[path] = (start, range.$2);
+      _previewPage = start;
+    });
   }
 
   void _setEnd(String path, int value) {
     final range = _ranges[path];
     if (range == null) return;
     final last = (_countsCache[path] ?? 1) - 1;
-    setState(() => _ranges[path] = (range.$1, value.clamp(range.$1, last)));
+    final end = value.clamp(range.$1, last);
+    setState(() {
+      _ranges[path] = (range.$1, end);
+      _previewPage = end;
+    });
   }
 
   Future<void> _merge() async {
@@ -87,42 +99,32 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             ToolAppBar(
               title: context.tr('merge.title'),
               titleSize: 22,
               onBack: () => Navigator.of(context).maybePop(),
-              trailing: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    for (final file in _files) {
-                      _ranges[file.path] = (0, (counts[file.path] ?? 1) - 1);
-                    }
-                  });
-                },
-                behavior: HitTestBehavior.opaque,
-                child: const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(child: Icon(Icons.delete_outline, size: 22, color: AppColors.textSecondary)),
-                ),
-              ),
             ),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  _PreviewArea(file: activeFile, range: activeRange, total: activeTotal),
+                  _PreviewArea(file: activeFile, page: _previewPage, range: activeRange, total: activeTotal),
                   const Divider(height: 1, thickness: 1, color: AppColors.border),
                   _Filmstrip(
                     files: _files,
                     active: _active,
                     ranges: _ranges,
                     counts: counts,
-                    onSelect: (index) => setState(() => _active = index),
+                    onSelect: (index) => setState(() {
+                      _active = index;
+                      _previewPage = _ranges[_files[index].path]?.$1 ?? 0;
+                    }),
                     onSetStart: _setStart,
                     onSetEnd: _setEnd,
                   ),
@@ -180,14 +182,18 @@ class _MergeTrimScreenState extends ConsumerState<MergeTrimScreen> {
           ],
         ),
       ),
-    );
+      if (_running) const _MergeLoadingOverlay(),
+    ],
+  ),
+);
   }
 }
 
 class _PreviewArea extends StatelessWidget {
-  const _PreviewArea({required this.file, required this.range, required this.total});
+  const _PreviewArea({required this.file, required this.page, required this.range, required this.total});
 
   final PdfFile file;
+  final int page;
   final (int, int) range;
   final int total;
 
@@ -207,7 +213,7 @@ class _PreviewArea extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            context.tr('page.of', namedArgs: {'a': '$start', 'b': '$total'}),
+            context.tr('page.of', namedArgs: {'a': '${page + 1}', 'b': '$total'}),
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 14),
@@ -215,14 +221,16 @@ class _PreviewArea extends StatelessWidget {
             child: Container(
               width: 200,
               height: 250,
-              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.white,
                 borderRadius: BorderRadius.circular(AppDimens.radiusPage),
                 border: Border.all(color: AppColors.border),
                 boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 8))],
               ),
-              child: const _FakePage(),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppDimens.radiusPage),
+                child: _PageRender(path: file.path, page: page),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -243,28 +251,89 @@ class _PreviewArea extends StatelessWidget {
   }
 }
 
-class _FakePage extends StatelessWidget {
-  const _FakePage();
+class _PageRender extends StatefulWidget {
+  const _PageRender({required this.path, required this.page});
+
+  final String path;
+  final int page;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(width: 60, height: 8, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(4))),
-      const SizedBox(height: 24),
-      for (final width in const [1.0, 0.85, 1.0, 0.7, 0.9, 0.6]) ...[
-        FractionallySizedBox(
-          widthFactor: width,
-          child: Container(
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2)),
+  State<_PageRender> createState() => _PageRenderState();
+}
+
+class _PageRenderState extends State<_PageRender> {
+  Uint8List? _bytes;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_render());
+  }
+
+  @override
+  void didUpdateWidget(_PageRender old) {
+    super.didUpdateWidget(old);
+    if (old.path != widget.path || old.page != widget.page) {
+      _bytes = null;
+      _failed = false;
+      unawaited(_render());
+    }
+  }
+
+  Future<void> _render() async {
+    final path = widget.path;
+    final page = widget.page;
+    final result = await getIt.get<PdfEngineService>().renderPage(path, page);
+    if (!mounted) return;
+    if (path != widget.path || page != widget.page) return;
+    setState(() {
+      switch (result) {
+        case Success(:final value):
+          _bytes = value;
+        case Failure():
+          _failed = true;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return Center(child: Text(context.tr('error.unknown'), style: const TextStyle(color: AppColors.textSecondary)));
+    }
+    if (_bytes == null) return const Center(child: CircularProgressIndicator());
+    return Image.memory(_bytes!, fit: BoxFit.contain);
+  }
+}
+
+class _MergeLoadingOverlay extends StatelessWidget {
+  const _MergeLoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: const Color(0x66000000),
+    alignment: Alignment.center,
+    child: Container(
+      width: 300,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 50, offset: Offset(0, 25))],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(height: 16),
+          Text(
+            context.tr('merge.processing'),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
           ),
-        ),
-      ],
-      const Spacer(),
-      Container(height: 60, decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(4))),
-    ],
+        ],
+      ),
+    ),
   );
 }
 
