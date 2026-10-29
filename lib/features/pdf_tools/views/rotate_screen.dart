@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -20,16 +21,17 @@ final class RotateScreen extends HookConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.localized(context))));
   }
 
-  Future<void> _pickFile(BuildContext context, RotateVm vm) async {
+  Future<bool> _pickFile(BuildContext context, RotateVm vm) async {
     final picked = await pickPdfFiles();
-    if (!context.mounted) return;
-    if (picked.isEmpty) return;
+    if (!context.mounted) return false;
+    if (picked.isEmpty) return false;
     final file = picked.first;
     if (file.sizeBytes > _maxFileBytes) {
       _showError(context, Exception('file_too_large'));
-      return;
+      return false;
     }
     vm.setFile(file);
+    return true;
   }
 
   Future<void> _run(BuildContext context, WidgetRef ref, RotateVm vm) async {
@@ -63,6 +65,19 @@ final class RotateScreen extends HookConsumerWidget {
       return null;
     }, [file?.path, pageCount]);
 
+    // Pick the source document immediately instead of showing a separate
+    // "select a PDF" screen. Cancelling returns to the previous screen.
+    useEffect(() {
+      if (vm.file.value == null) {
+        unawaited(
+          _pickFile(context, vm).then((picked) {
+            if (!picked && context.mounted) Navigator.of(context).maybePop();
+          }),
+        );
+      }
+      return null;
+    }, const []);
+
     final selectedCount = selected.length;
     final dirLabel = direction == RotateDirection.clockwise
         ? context.tr('rotate.direction.cw')
@@ -80,7 +95,7 @@ final class RotateScreen extends HookConsumerWidget {
             ),
             Expanded(
               child: file == null
-                  ? _EmptyPicker(onPick: () => _pickFile(context, vm), label: context.tr('rotate.select'))
+                  ? const SizedBox.shrink()
                   : Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
                       child: Column(
@@ -145,33 +160,6 @@ final class RotateScreen extends HookConsumerWidget {
       ),
     );
   }
-}
-
-class _EmptyPicker extends StatelessWidget {
-  const _EmptyPicker({required this.onPick, required this.label});
-
-  final VoidCallback onPick;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
-      child: GestureDetector(
-        onTap: onPick,
-        child: Container(
-          height: AppDimens.ctaHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFD6D6DB)),
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          ),
-          child: Center(
-            child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 class _SourceRow extends StatelessWidget {
