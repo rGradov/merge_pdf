@@ -97,20 +97,22 @@ final class ResultScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   PrimaryButton(label: context.tr('common.share'), onTap: () => _share(result)),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    onPressed: () => _open(result),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.text,
-                      side: const BorderSide(color: AppColors.border),
-                      minimumSize: const Size.fromHeight(AppDimens.ctaHeight),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                  if (results.length == 1) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      onPressed: () => _open(result),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.border),
+                        minimumSize: const Size.fromHeight(AppDimens.ctaHeight),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                      ),
+                      child: Text(
+                        context.tr('common.open'),
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
+                      ),
                     ),
-                    child: Text(
-                      context.tr('common.open'),
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
-                    ),
-                  ),
+                  ],
                   const SizedBox(height: 6),
                   TextButton(
                     onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),

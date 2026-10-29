@@ -117,14 +117,20 @@ final class LocalPdfEngineService implements PdfEngineService {
   Future<EmptyResult> extractPages(String path, List<int> pages, String outputPath) async {
     final pdf = Pdf();
     try {
-      final sink = await FileSink.create(File(outputPath));
+      final editor = await pdf.edit(FileSource(File(path)));
       try {
-        await pdf.extractPages(FileSource(File(path)), sink, pages: pages);
-        return Result.success<Empty>(const Empty());
+        await editor.selectPages(pages);
+        final sink = await FileSink.create(File(outputPath));
+        try {
+          await editor.save(sink);
+          return Result.success<Empty>(const Empty());
+        } finally {
+          await sink.close();
+        }
       } on Exception catch (e) {
         return Result.failure<Empty>(e);
       } finally {
-        await sink.close();
+        await editor.dispose();
       }
     } on Exception catch (e) {
       return Result.failure<Empty>(e);
@@ -153,8 +159,15 @@ final class LocalPdfEngineService implements PdfEngineService {
     }
   }
 
+  final Map<String, Uint8List> _renderCache = {};
+
+  static String _renderKey(String path, int page, int maxDim) => '$path#$page@$maxDim';
+
   @override
   Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim = 800}) async {
+    final key = _renderKey(path, pageIndex, maxDim);
+    final cached = _renderCache[key];
+    if (cached != null) return Result.success(cached);
     final pdf = Pdf();
     try {
       final doc = await pdf.open(FileSource(File(path)));
@@ -162,6 +175,7 @@ final class LocalPdfEngineService implements PdfEngineService {
         final rendered = await doc
             .render(pages: PdfPages.single(pageIndex), size: PdfRenderSize.thumbnail(maxDim))
             .first;
+        _renderCache[key] = rendered.data;
         return Result.success(rendered.data);
       } on Exception catch (e) {
         return Result.failure<Uint8List>(e);
@@ -170,6 +184,35 @@ final class LocalPdfEngineService implements PdfEngineService {
       }
     } on Exception catch (e) {
       return Result.failure<Uint8List>(e);
+    } finally {
+      await pdf.dispose();
+    }
+  }
+
+  @override
+  Future<Result<Map<int, Uint8List>>> renderPages(String path, List<int> pages, {int maxDim = 220}) async {
+    final pdf = Pdf();
+    try {
+      final doc = await pdf.open(FileSource(File(path)));
+      try {
+        final out = <int, Uint8List>{};
+        var i = 0;
+        await for (final rendered in doc.render(pages: PdfPages.list(pages), size: PdfRenderSize.thumbnail(maxDim))) {
+          if (i < pages.length) {
+            final page = pages[i];
+            _renderCache[_renderKey(path, page, maxDim)] = rendered.data;
+            out[page] = rendered.data;
+          }
+          i++;
+        }
+        return Result.success(out);
+      } on Exception catch (e) {
+        return Result.failure<Map<int, Uint8List>>(e);
+      } finally {
+        await doc.dispose();
+      }
+    } on Exception catch (e) {
+      return Result.failure<Map<int, Uint8List>>(e);
     } finally {
       await pdf.dispose();
     }

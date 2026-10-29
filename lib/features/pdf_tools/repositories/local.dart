@@ -19,6 +19,8 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   final PdfEngineService _engine;
   final RecentFilesService _recents;
 
+  static int _seq = 0;
+
   Future<String> _outputDir() async {
     final dir = await getApplicationDocumentsDirectory();
     final outputs = Directory('${dir.path}/outputs');
@@ -132,7 +134,7 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   Future<Result<PdfResult>> extract(PdfFile file, List<int> pages) async {
     try {
       final now = DateTime.now();
-      final name = 'extract-${now.millisecondsSinceEpoch}.pdf';
+      final name = 'extract-${now.millisecondsSinceEpoch}-${_seq++}.pdf';
       final path = await _outputPath(name);
       final written = await _engine.extractPages(file.path, pages, path);
       final error = written.errorOrNull;

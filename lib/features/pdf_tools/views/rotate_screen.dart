@@ -3,9 +3,11 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:merge_pdf/features/pdf_tools/services/services.dart';
 import 'package:merge_pdf/features/pdf_tools/utils/utils.dart';
 import 'package:merge_pdf/features/pdf_tools/view_models/view_models.dart';
 import 'package:merge_pdf/features/pdf_tools/views/result_screen.dart';
+import 'package:merge_pdf/global.dart';
 import 'package:merge_pdf/presentation/core/widgets/widgets.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
@@ -71,6 +73,22 @@ final class RotateScreen extends HookConsumerWidget {
       }
       return null;
     }, const []);
+
+    // Prefetch the first pages in one pass so the grid fills in immediately.
+    useEffect(() {
+      final current = file;
+      if (current != null && pageCount > 0) {
+        final n = pageCount < 24 ? pageCount : 24;
+        unawaited(
+          getIt.get<PdfEngineService>().renderPages(
+            current.path,
+            [for (var i = 0; i < n; i++) i],
+            maxDim: 220,
+          ),
+        );
+      }
+      return null;
+    }, [file?.path, pageCount]);
 
     final selectedCount = selected.length;
     final dirLabel = direction == RotateDirection.clockwise

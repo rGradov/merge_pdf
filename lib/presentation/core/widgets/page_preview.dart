@@ -46,6 +46,17 @@ class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
     super.initState();
     _current = widget.page.clamp(0, widget.total - 1);
     _controller = PageController(initialPage: _current);
+    unawaited(_prefetch());
+  }
+
+  Future<void> _prefetch() async {
+    final start = (_current - 2).clamp(0, widget.total - 1);
+    final end = (_current + 2).clamp(0, widget.total - 1);
+    await getIt.get<PdfEngineService>().renderPages(
+      widget.path,
+      [for (var i = start; i <= end; i++) i],
+      maxDim: 800,
+    );
   }
 
   @override

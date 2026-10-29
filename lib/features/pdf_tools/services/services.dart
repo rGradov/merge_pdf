@@ -42,6 +42,9 @@ abstract interface class PdfEngineService {
 
   /// Renders the 0-based [pageIndex] as PNG bytes, capped to [maxDim] pixels.
   Future<Result<Uint8List>> renderPage(String path, int pageIndex, {int maxDim = 800});
+
+  /// Renders the 0-based [pages] in one pass, returning page index → PNG bytes.
+  Future<Result<Map<int, Uint8List>>> renderPages(String path, List<int> pages, {int maxDim = 220});
 }
 
 /// Persistence of the recent files list.

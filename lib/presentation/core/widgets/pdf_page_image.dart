@@ -33,9 +33,12 @@ final class PdfPageImage extends StatefulWidget {
   State<PdfPageImage> createState() => _PdfPageImageState();
 }
 
-class _PdfPageImageState extends State<PdfPageImage> {
+class _PdfPageImageState extends State<PdfPageImage> with AutomaticKeepAliveClientMixin {
   Uint8List? _bytes;
   bool _failed = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -72,6 +75,7 @@ class _PdfPageImageState extends State<PdfPageImage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_failed) {
       return Center(child: Icon(Icons.description, size: 20, color: AppColors.textHint));
     }
