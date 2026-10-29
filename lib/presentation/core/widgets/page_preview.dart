@@ -77,6 +77,7 @@ class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
           children: [
             SizedBox(
               height: 44,
+              width: double.infinity,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
