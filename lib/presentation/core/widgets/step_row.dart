@@ -15,34 +15,34 @@ final class StepRow extends StatelessWidget {
     for (var i = 0; i < steps.length; i++) {
       if (i > 0) {
         children.add(
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Container(height: 1, color: AppColors.border),
-            ),
-          ),
+          Container(width: 12, height: 1, color: AppColors.border),
         );
       }
       children.add(
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(color: AppColors.chip, shape: BoxShape.circle),
-              child: Text(
-                '${i + 1}',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: AppColors.chip, shape: BoxShape.circle),
+                child: Text(
+                  '${i + 1}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              steps[i],
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  steps[i],
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

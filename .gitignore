@@ -59,5 +59,7 @@ lib/objectbox-model.json
 .design/
 
 # FVM: keep the pinned version file, ignore the SDK symlink and service files
-.fvm/*
 !.fvm/fvm_config.json
+
+# FVM Version Cache
+.fvm/

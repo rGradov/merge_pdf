@@ -20,10 +20,16 @@ final class SettingsScreen extends HookConsumerWidget {
         backgroundColor: AppColors.white,
         title: Text(context.tr('home.storage.free')),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text(context.tr('common.cancel'))),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.tr('common.cancel')),
+          ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.tr('common.delete'), style: const TextStyle(color: AppColors.primary)),
+            child: Text(
+              context.tr('common.delete'),
+              style: const TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -40,7 +46,10 @@ final class SettingsScreen extends HookConsumerWidget {
       AsyncData(:final value) => switch (value) {
         Success(:final value) => switch (value) {
           HasData(:final data) =>
-            (data.fold<int>(0, (sum, file) => sum + file.sizeBytes) / 1024 / 1024).toStringAsFixed(1),
+            (data.fold<int>(0, (sum, file) => sum + file.sizeBytes) /
+                    1024 /
+                    1024)
+                .toStringAsFixed(1),
           NoData() => '0.0',
         },
         Failure() => '0.0',
@@ -53,9 +62,14 @@ final class SettingsScreen extends HookConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MainAppBar(title: context.tr('settings.title'), onSettings: () => Navigator.of(context).pop()),
+            MainAppBar(
+              title: context.tr('settings.title'),
+              onSettings: () => Navigator.of(context).pop(),
+            ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.horizontalPadding),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.horizontalPadding,
+              ),
               child: StorageTile(
                 usedLabel: context.tr('home.storage.used', args: [usedMb]),
                 onFreeUp: () => _freeUpSpace(context, ref),
