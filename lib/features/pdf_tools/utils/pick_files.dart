@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
+import 'package:merge_pdf/utils/utils.dart';
 
 /// Picks PDF files from the system picker.
 ///
@@ -12,8 +13,13 @@ Future<List<PdfFile>> pickPdfFiles({bool allowMultiple = false}) async {
     final single = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: const ['pdf']);
     if (single != null) files.add(single);
   }
-  return [
+  final result = [
     for (final picked in files)
       if (picked.path != null) PdfFile(path: picked.path!, name: picked.name, sizeBytes: picked.lengthSync() ?? 0),
   ];
+  AppLog.instance.info('pick.files count=${result.length}');
+  for (final file in result) {
+    AppLog.instance.info('pick.file name=${file.name} size=${file.sizeBytes}B path=${file.path}');
+  }
+  return result;
 }

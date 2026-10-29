@@ -69,6 +69,9 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   ) async {
     try {
       final now = DateTime.now();
+      AppLog.instance.info(
+        'merge.start inputs=${files.map((f) => '${f.name}|${f.sizeBytes}B|${f.path}').join(', ')}',
+      );
       final tempDir = Directory('${await _outputDir()}/tmp');
       await tempDir.create(recursive: true);
 
@@ -116,9 +119,11 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
       final pages = await _countPages(path);
       final sizeBytes = File(path).lengthSync();
       final result = PdfResult(path: path, name: name, pages: pages, sizeBytes: sizeBytes, tool: ToolKind.merge);
+      AppLog.instance.info('merge.done output=$path pages=$pages size=${sizeBytes}B');
       await _record(_recent(result, now));
       return Result.success(result);
     } on Exception catch (e) {
+      AppLog.instance.error('merge.failed', e);
       return Result.failure(e);
     }
   }
@@ -134,6 +139,7 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   Future<Result<PdfResult>> extract(PdfFile file, List<int> pages) async {
     try {
       final now = DateTime.now();
+      AppLog.instance.info('split.extract.start input=${file.path} pages=${pages.length} pagesList=$pages');
       final name = 'extract-${now.millisecondsSinceEpoch}-${_seq++}.pdf';
       final path = await _outputPath(name);
       final written = await _engine.extractPages(file.path, pages, path);
@@ -147,9 +153,11 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
         sizeBytes: sizeBytes,
         tool: ToolKind.split,
       );
+      AppLog.instance.info('split.extract.done output=$path pages=${pages.length} size=${sizeBytes}B');
       await _record(_recent(result, now));
       return Result.success(result);
     } on Exception catch (e) {
+      AppLog.instance.error('split.extract.failed', e);
       return Result.failure(e);
     }
   }
@@ -192,6 +200,7 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
   Future<Result<PdfResult>> rotate(PdfFile file, int degrees, List<int> pages) async {
     try {
       final now = DateTime.now();
+      AppLog.instance.info('rotate.start input=${file.path} degrees=$degrees pages=${pages.length}');
       final name = 'rotated-${now.millisecondsSinceEpoch}.pdf';
       final path = await _outputPath(name);
       final written = await _engine.rotatePages(file.path, {for (final p in pages) p: degrees}, path);
@@ -206,9 +215,11 @@ final class LocalPdfToolsRepository implements PdfToolsRepository {
         sizeBytes: sizeBytes,
         tool: ToolKind.rotate,
       );
+      AppLog.instance.info('rotate.done output=$path pages=$totalPages size=${sizeBytes}B');
       await _record(_recent(result, now));
       return Result.success(result);
     } on Exception catch (e) {
+      AppLog.instance.error('rotate.failed', e);
       return Result.failure(e);
     }
   }

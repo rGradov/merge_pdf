@@ -1,6 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:merge_pdf/features/home/views/logs_screen.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
 import 'package:merge_pdf/features/pdf_tools/use_cases/use_cases.dart';
 import 'package:merge_pdf/features/pdf_tools/view_models/view_models.dart';
@@ -24,6 +27,7 @@ final class SettingsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recents = ref.watch(recentFilesProvider);
+    final versionTaps = useState(0);
     final files = switch (recents) {
       AsyncData(:final value) => switch (value) {
         Success(:final value) => switch (value) {
@@ -87,10 +91,27 @@ final class SettingsScreen extends HookConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    context.tr('settings.version'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textHint),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      versionTaps.value++;
+                      if (versionTaps.value >= 5) {
+                        versionTaps.value = 0;
+                        if (kDebugMode) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(builder: (_) => const LogsScreen()),
+                          );
+                        }
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        context.tr('settings.version'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textHint),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
