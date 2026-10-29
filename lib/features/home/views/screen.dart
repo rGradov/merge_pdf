@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:merge_pdf/core/navigation/app_router.dart';
+import 'package:merge_pdf/core/services/services.dart';
 import 'package:merge_pdf/features/home/view_models/view_models.dart';
 import 'package:merge_pdf/features/home/widgets/widgets.dart';
 import 'package:merge_pdf/features/pdf_tools/models/models.dart';
@@ -43,6 +44,13 @@ final class HomeScreen extends HookConsumerWidget {
     await getIt.get<ClearStorageUseCase>().call();
     ref.invalidate(recentFilesProvider);
   }
+
+  Future<void> _deleteFile(WidgetRef ref, HomeVm vm, RecentFile file) async {
+    await vm.remove.call(file.id);
+    ref.invalidate(recentFilesProvider);
+  }
+
+  Future<void> _shareFile(RecentFile file) => getIt.get<ShareService>().shareFile(file.path);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,6 +95,8 @@ final class HomeScreen extends HookConsumerWidget {
                       HasData(:final data) => _RecentsList(
                         files: data,
                         onMore: (file) => _onMore(context, ref, vm, file),
+                        onDelete: (file) => _deleteFile(ref, vm, file),
+                        onShare: _shareFile,
                         onFreeUp: (count, sizeBytes) => _freeUpSpace(context, ref, count, sizeBytes),
                       ),
                       NoData() => Center(
@@ -138,10 +148,18 @@ final class HomeScreen extends HookConsumerWidget {
 }
 
 class _RecentsList extends StatelessWidget {
-  const _RecentsList({required this.files, required this.onMore, required this.onFreeUp});
+  const _RecentsList({
+    required this.files,
+    required this.onMore,
+    required this.onDelete,
+    required this.onShare,
+    required this.onFreeUp,
+  });
 
   final List<RecentFile> files;
   final ValueChanged<RecentFile> onMore;
+  final Future<void> Function(RecentFile) onDelete;
+  final Future<void> Function(RecentFile) onShare;
   final void Function(int count, int sizeBytes) onFreeUp;
 
   @override
@@ -156,13 +174,38 @@ class _RecentsList extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final file in files)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: RecentTile(
-              name: file.name,
-              subtitle: recentFileMeta(context, file),
-              onTap: () => showPdfPreview(context, path: file.path, page: 0, total: file.pages == 0 ? 1 : file.pages),
-              onMore: () => onMore(file),
+          Dismissible(
+            key: ValueKey(file.id),
+            direction: DismissDirection.horizontal,
+            background: _SwipeAction(
+              icon: Icons.ios_share,
+              label: context.tr('common.share'),
+              color: const Color(0xFF3B82F6),
+              alignment: Alignment.centerLeft,
+            ),
+            secondaryBackground: _SwipeAction(
+              icon: Icons.delete_outline,
+              label: context.tr('common.delete'),
+              color: AppColors.primary,
+              alignment: Alignment.centerRight,
+            ),
+            confirmDismiss: (direction) async {
+              if (direction == DismissDirection.endToStart) {
+                await onDelete(file);
+                return true;
+              }
+              await onShare(file);
+              return false;
+            },
+            onDismissed: (_) {},
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: RecentTile(
+                name: file.name,
+                subtitle: recentFileMeta(context, file),
+                onTap: () => showPdfPreview(context, path: file.path, page: 0, total: file.pages == 0 ? 1 : file.pages),
+                onMore: () => onMore(file),
+              ),
             ),
           ),
         const SizedBox(height: 6),
@@ -173,4 +216,35 @@ class _RecentsList extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SwipeAction extends StatelessWidget {
+  const _SwipeAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.alignment,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(AppDimens.radiusCard)),
+    child: Align(
+      alignment: alignment,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 22, color: AppColors.white),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.white)),
+        ],
+      ),
+    ),
+  );
 }

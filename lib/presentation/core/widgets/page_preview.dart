@@ -7,7 +7,8 @@ import 'package:merge_pdf/global.dart';
 import 'package:merge_pdf/presentation/presentation.dart';
 import 'package:merge_pdf/utils/utils.dart';
 
-/// Shows a real page preview as a bottom sheet, rendering the page on the fly.
+/// Shows a near-fullscreen, real page preview with horizontal swipe to flip
+/// between pages.
 Future<void> showPdfPreview(
   BuildContext context, {
   required String path,
@@ -16,6 +17,7 @@ Future<void> showPdfPreview(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: AppColors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -36,6 +38,75 @@ class _PdfPreviewSheet extends StatefulWidget {
 }
 
 class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
+  late final PageController _controller;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.page.clamp(0, widget.total - 1);
+    _controller = PageController(initialPage: _current);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height * 0.92;
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: height,
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              context.tr('page.of', namedArgs: {'a': '${_current + 1}', 'b': '${widget.total}'}),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: widget.total,
+                onPageChanged: (index) => setState(() => _current = index),
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: _PageRender(path: widget.path, page: index),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PageRender extends StatefulWidget {
+  const _PageRender({required this.path, required this.page});
+
+  final String path;
+  final int page;
+
+  @override
+  State<_PageRender> createState() => _PageRenderState();
+}
+
+class _PageRenderState extends State<_PageRender> {
   Uint8List? _bytes;
   bool _failed = false;
 
@@ -45,9 +116,22 @@ class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
     unawaited(_render());
   }
 
+  @override
+  void didUpdateWidget(_PageRender old) {
+    super.didUpdateWidget(old);
+    if (old.path != widget.path || old.page != widget.page) {
+      _bytes = null;
+      _failed = false;
+      unawaited(_render());
+    }
+  }
+
   Future<void> _render() async {
-    final result = await getIt.get<PdfEngineService>().renderPage(widget.path, widget.page);
+    final path = widget.path;
+    final page = widget.page;
+    final result = await getIt.get<PdfEngineService>().renderPage(path, page);
     if (!mounted) return;
+    if (path != widget.path || page != widget.page) return;
     setState(() {
       switch (result) {
         case Success(:final value):
@@ -59,42 +143,14 @@ class _PdfPreviewSheetState extends State<_PdfPreviewSheet> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999)),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            context.tr('page.of', namedArgs: {'a': '${widget.page + 1}', 'b': '${widget.total}'}),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 380,
-            width: double.infinity,
-            child: Center(
-              child: _failed
-                  ? Text(context.tr('error.unknown'), style: const TextStyle(color: AppColors.textSecondary))
-                  : _bytes == null
-                      ? const CircularProgressIndicator()
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(AppDimens.radiusPage),
-                          child: Image.memory(_bytes!, fit: BoxFit.contain),
-                        ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return Center(child: Text(context.tr('error.unknown'), style: const TextStyle(color: AppColors.textSecondary)));
+    }
+    if (_bytes == null) return const Center(child: CircularProgressIndicator());
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimens.radiusPage),
+      child: Image.memory(_bytes!, fit: BoxFit.contain),
+    );
+  }
 }
